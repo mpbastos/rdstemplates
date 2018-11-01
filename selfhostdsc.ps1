@@ -1,8 +1,11 @@
 Configuration SelfhostConfig {
 
-	 param(
-        [string]$ProfileShare
-		)
+        param(
+                        [parameter(Mandatory=$true)][string]$Prof,
+                        [parameter(Mandatory=$true)][string] $BaseUrl,
+                        [string] $SXSMsi,
+                        [string] $enableScript
+             )
 
 	Import-DscResource -ModuleName 'PSDesiredStateConfiguration'
 
@@ -11,11 +14,25 @@ Configuration SelfhostConfig {
 				@{path="HKLM:\TempDefault\software\policies\microsoft\office\16.0\outlook\cached mode"; name="enable"; value = 1},
 				@{path="HKLM:\TempDefault\software\policies\microsoft\office\16.0\outlook\cached mode"; name="syncwindowsetting"; value=1})
 
+#Find the SKU
+$osinfo = Get-WmiObject -Class Win32_OperatingSystem -Namespace "root\cimv2"
+if($osinfo.Caption.Contains("Enterprise"))
+{
+        $rdshName = "AppServerClient"
+}
+else
+{
+        $rdshName = "RDS-RD-Server"
+}
 
 
 
+$msiUrl = "$BaseUrl\$SXSMsi"
+$scriptUrl = "$BaseUrl\$enableScript"
 
-	Node $AllNodes.Where.NodeName
+
+
+	Node "localhost"
 	{
 
 
@@ -33,7 +50,7 @@ Configuration SelfhostConfig {
 			Ensure      = "Present"
 				Key         = "HKEY_LOCAL_MACHINE\SOFTWARE\FSLogix\Profiles"
 				ValueName   = "VHDLocations"
-				ValueData   = $ProfileShare
+				ValueData   = $Prof
 		}
 		Registry OfficeEnabled
 		{
@@ -47,7 +64,7 @@ Configuration SelfhostConfig {
 			Ensure      = "Present"
 				Key         = "HKEY_LOCAL_MACHINE\SOFTWARE\Policies\FSLogix\ODFC"
 				ValueName   = "VHDLocations"
-				ValueData   = $ProfileShare
+				ValueData   = $Prof
 		}
 
 
@@ -59,6 +76,7 @@ Configuration SelfhostConfig {
 				Key         = "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp"
 				ValueName   = "MaxMonitors"
 				ValueData   = 4
+                                DependsOn ="[Script]SXSStack"
 		}
 		Registry MaxXResolution
 		{
@@ -67,6 +85,7 @@ Configuration SelfhostConfig {
 				ValueName   = "MaxXResolution"
 				Hex         = $true
 				ValueData   = "00001400"
+                                DependsOn ="[Script]SXSStack"
 		}
 		Registry MaxYResolution
 		{
@@ -75,29 +94,33 @@ Configuration SelfhostConfig {
 				ValueName   = "MaxYResolution"
 				Hex         = $true
 				ValueData   = "00000b40"
+                                DependsOn ="[Script]SXSStack"
 		}
 		Registry MaxMonitorsS
 		{
 			Ensure      = "Present"  # You can also set Ensure to "Absent"
-				Key         = "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\rdp-sxs17713"
+				Key         = "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\rdp-sxs"
 				ValueName   = "MaxMonitors"
 				ValueData   = 4
+                                DependsOn ="[Script]SXSStack"
 		}
 		Registry MaxXResolutionS
 		{
 			Ensure      = "Present"  # You can also set Ensure to "Absent"
-				Key         = "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\rdp-sxs17713"
+				Key         = "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\rdp-sxs"
 				ValueName   = "MaxXResolution"
 				Hex         = $true
 				ValueData   = "00001400"
+                                DependsOn ="[Script]SXSStack"
 		}
 		Registry MaxYResolutionS
 		{
 			Ensure      = "Present"  # You can also set Ensure to "Absent"
-				Key         = "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\rdp-sxs17713"
+				Key         = "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\rdp-sxs"
 				ValueName   = "MaxYResolution"
 				Hex         = $true
 				ValueData   = "00000b40"
+                                DependsOn ="[Script]SXSStack"
 		}
 # End of 5k Resolution
 
@@ -105,7 +128,7 @@ Configuration SelfhostConfig {
 			Group AddAdminGroups {
 				GroupName        = 'administrators'
 					Ensure           = 'Present'
-					MembersToInclude = @('redmond\avdselfadmin','ntdev\avdselfadmin')
+					MembersToInclude = 'redmond\avdselfadmin'
 					MembersToExclude = 'redmond\selfhost'
 			}
 
@@ -175,6 +198,61 @@ Configuration SelfhostConfig {
 
 			GetScript = {@{Result="Ok"}}
 		}
+
+
+                Script SXSStack {
+
+                        SetScript = { 
+                                function Download($url, $output)
+                                {
+
+                                        $wc = New-Object System.Net.WebClient
+                                                $wc.DownloadFile($url, $output)   
+
+                                }
+
+                                if([environment]::OSversion.Version.Build -lt 16773)
+                                {
+# Intall SXS msi
+
+                                        Download "https://wvdselfhost.blob.core.windows.net/public/SxSStackInstaller-181017001.msi" ".\sxs.msi"
+
+# Wait for msi to finish
+                                                Start-Process msiexec.exe -Wait -ArgumentList '/I .\sxs.msi /quiet'
+
+                                                $DataStamp = get-date -Format yyyyMMddTHHmmss
+                                                $logFile = 'SXSinstall-{0}.log' -f $DataStamp
+                                                $MSIArguments = @(
+                                                                "/i"
+                                                                "sxs.msi"
+                                                                "/qn"
+                                                                "/norestart"
+                                                                "/L*v"
+                                                                $logFile
+                                                                )
+                                                Start-Process "msiexec.exe" -ArgumentList $MSIArguments -Wait -NoNewWindow 
+
+                                }
+                                else
+                                {
+                                        Download "https://wvdselfhost.blob.core.windows.net/public/enablesxsstackrc.ps1"  ".\enable.ps1"
+                                                .\enable.ps1
+
+                                }
+                        }
+                        TestScript = {
+                                $out = qwinsta
+                                $result =$false
+                                foreach($line in $out)
+                                {
+                                        if($line.Contains("rdp-sxs")) { $result = $true}
+
+                                }
+
+                                $result        
+                        }
+			GetScript = {@{Result="Ok"}}
+                }
 
 	}
 
