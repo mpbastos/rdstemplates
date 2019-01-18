@@ -141,7 +141,7 @@
                         "createOption": "fromImage",
                         "managedDisk": {
                             "storageAccountType": "[parameters('osDiskType')]"
-                        },`
+                        },
                     "diskSizeGB": "[parameters('osDiskSize')]",
                     },
                     "imageReference": {
