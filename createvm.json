@@ -148,7 +148,7 @@
                         "id": "[parameters('imageUri')]"
                     },
                     "dataDisks": [
-                                 "[if(not(equals(parameters('dataDiskSize'),0)),variables('dataDiskObj'),json(null))]"
+                                 "[if(not(equals(parameters('dataDiskSize'),0)),variables('dataDiskObj'),json('null'))]"
                     ]
                 },
                 "networkProfile": {
