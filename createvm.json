@@ -147,9 +147,7 @@
                     "imageReference": {
                         "id": "[parameters('imageUri')]"
                     },
-                    "dataDisks": [
-                                 "[if(not(equals(parameters('dataDiskSize'),0)),variables('dataDiskObj'),json('null'))]"
-                    ]
+                    "dataDisks": "[if(not(equals(parameters('dataDiskSize'),0)),createArray(variables('dataDiskObj')),json('[]'))]"
                 },
                 "networkProfile": {
                     "networkInterfaces": [
