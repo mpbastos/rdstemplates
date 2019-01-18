@@ -64,6 +64,7 @@
                             "lun": 0,
                             "caching": "ReadOnly",
                             "writeAcceleratorEnabled": false,
+                            "createOption": "Attach",
                             "managedDisk": {
                                     "id": "[resourceId('Microsoft.Compute/disks/',concat(parameters('virtualMachineName'), '_dataDisk'))]"
                             }
