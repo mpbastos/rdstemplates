@@ -30,11 +30,11 @@
             "type": "string"
         },
         "osDiskSize": {
-            "type": "integer"
+            "type": "int"
             "defaultValue": 300,
         },
         "dataDiskSize": {
-            "type": "integer"
+            "type": "int"
             "defaultValue": 0,
         },
         "virtualMachineSize": {
@@ -142,7 +142,7 @@
                         "managedDisk": {
                             "storageAccountType": "[parameters('osDiskType')]"
                         },`
-                    "diskSizeGB": "integer[parameters('osDiskSize')]",
+                    "diskSizeGB": "[parameters('osDiskSize')]",
                     },
                     "imageReference": {
                         "id": "[parameters('imageUri')]"
