@@ -31,11 +31,11 @@
         },
         "osDiskSize": {
             "type": "int",
-            "defaultValue": 300,
+            "defaultValue": 300
         },
         "dataDiskSize": {
             "type": "int",
-            "defaultValue": 0,
+            "defaultValue": 0
         },
         "virtualMachineSize": {
             "type": "string"
@@ -63,7 +63,7 @@
         "dataDiskObj":{
                             "lun": 0,
                             "caching": "ReadOnly",
-                            "writeAcceleratorEnabled": boolean,
+                            "writeAcceleratorEnabled": false,
                             "createOption": "Empty",
                             "managedDisk": {
                                     "id": "[comcat('Microsoft.Compute/disks/',parameters('virtualMachineName'), '_dataDisk')]"
