@@ -30,11 +30,11 @@
             "type": "string"
         },
         "osDiskSize": {
-            "type": "int"
+            "type": "int",
             "defaultValue": 300,
         },
         "dataDiskSize": {
-            "type": "int"
+            "type": "int",
             "defaultValue": 0,
         },
         "virtualMachineSize": {
