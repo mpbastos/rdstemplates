@@ -29,6 +29,14 @@
         "osDiskType": {
             "type": "string"
         },
+        "osDiskSize": {
+            "type": "int",
+            "defaultValue": 300
+        },
+        "dataDiskSize": {
+            "type": "int",
+            "defaultValue": 0
+        },
         "virtualMachineSize": {
             "type": "string"
         },
@@ -51,7 +59,16 @@
     "variables": {
         "nsgId": "[resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupName'))]",
         "vnetId": "[parameters('virtualNetworkId')]",
-        "subnetRef": "[concat(variables('vnetId'), '/subnets/', parameters('subnetName'))]"
+        "subnetRef": "[concat(variables('vnetId'), '/subnets/', parameters('subnetName'))]",
+        "dataDiskObj":{
+                            "lun": 0,
+                            "caching": "ReadOnly",
+                            "writeAcceleratorEnabled": false,
+                            "createOption": "Attach",
+                            "managedDisk": {
+                                    "id": "[resourceId('Microsoft.Compute/disks/',concat(parameters('virtualMachineName'), '_dataDisk'))]"
+                            }
+                }
     },
     "resources": [
         {
@@ -91,6 +108,23 @@
             "tags": {}
         },
         {
+            "condition": "[not(equals(parameters('dataDiskSize'),0))]",
+            "name": "[concat(parameters('virtualMachineName'), '_dataDisk')]",
+            "type": "Microsoft.Compute/disks",
+            "apiVersion": "2018-06-01",
+            "location": "[parameters('location')]",
+            "properties": {
+                "diskSizeGB": "[parameters('dataDiskSize')]",
+                "creationData": {
+                        "createOption": "empty"
+                    }
+            },
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "tags": {}
+        },
+        {
             "name": "[parameters('virtualMachineName')]",
             "type": "Microsoft.Compute/virtualMachines",
             "apiVersion": "2018-06-01",
@@ -107,11 +141,13 @@
                         "createOption": "fromImage",
                         "managedDisk": {
                             "storageAccountType": "[parameters('osDiskType')]"
-                        }
+                        },
+                    "diskSizeGB": "[parameters('osDiskSize')]",
                     },
                     "imageReference": {
                         "id": "[parameters('imageUri')]"
-                    }
+                    },
+                    "dataDisks": "[if(not(equals(parameters('dataDiskSize'),0)),createArray(variables('dataDiskObj')),json('[]'))]"
                 },
                 "networkProfile": {
                     "networkInterfaces": [
